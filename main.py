@@ -11,6 +11,10 @@ from src.communication.transmitter import PacketTransmitter
 from src.communication.packet_loss import PacketLossSimulator
 from src.communication.receiver import PacketReceiver
 
+from src.geometry.projection import WorldProjector
+
+from src.fusion.fusion_engine import EdgeServer
+
 import yaml
 
 
@@ -53,6 +57,18 @@ def main():
     calibration_manager.summary()
 
     # -----------------------------------------
+    # Create one projector for each camera
+    # -----------------------------------------
+
+    projectors = {}
+
+    for camera in cameras:
+
+        calibration = calibration_manager.get(camera)
+
+        projectors[camera] = WorldProjector(calibration)
+
+    # -----------------------------------------
     # Module 3 : Video Synchronization
     # -----------------------------------------
     synchronizer = VideoSynchronizer(
@@ -75,6 +91,8 @@ def main():
     packet_loss = PacketLossSimulator(loss_rate=0.0)
 
     receiver = PacketReceiver()
+
+    edge_server = EdgeServer()
 
     # -----------------------------------------
     # Process first synchronized frame
@@ -105,10 +123,19 @@ def main():
 
         receiver.receive(packets)
 
+        edge_server.receive(packets)
+
         print(f"Packets Sent : {len(packets)}")
 
         for packet in packets:
             print(packet)
+
+            projection = projectors[camera].bbox_to_world(packet.bbox)
+
+            print(
+                "World Point :",
+                projection["world_point"]
+            )
 
     synchronizer.release()
 
@@ -122,7 +149,8 @@ def main():
     print(transmitter.statistics())
     print(packet_loss.statistics())
     print(f"Edge Server Queue : {len(receiver.get_packets())} packets")
-
+    edge_server.summary()
+    
 
 if __name__ == "__main__":
     main()
