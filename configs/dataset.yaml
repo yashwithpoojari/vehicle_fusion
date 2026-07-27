@@ -1,0 +1,16 @@
+dataset_root: "C:/Users/Yashwith Poojari/Documents/internship/vehicle_fusion/data/raw/synthehicle"
+
+split: "train"
+
+scene: "Town01-O-day"
+
+cameras:
+  - C01
+  - C02
+  - C03
+
+calibration_root: "C:/Users/Yashwith Poojari/Documents/internship/vehicle_fusion/data/raw/synthehicle/calibration"
+
+manifest_path: "data/manifests/dataset_manifest.csv"
+
+scene_manifest: "data/manifests/scene_manifest.json"

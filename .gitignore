@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+
+# Virtual Environment
+venv/
+.venv/
+
+# VS Code
+.vscode/
+
+# YOLO weights
+yolov8*.pt
+
+# Outputs
+outputs/
+
+# Dataset
+data/raw/
+
+# Generated files
+data/manifests/*.csv
+data/manifests/*.json
+
+# Windows
+Thumbs.db
+Desktop.ini
