@@ -1,36 +1,83 @@
 from src.data.inventory import DatasetInventory
 from src.data.manifest import ManifestGenerator
 from src.data.synchronizer import VideoSynchronizer
+
 from src.detection.yolo_agent import YOLOAgent
 from src.detection.packet_builder import PacketBuilder
+
+from src.communication.transmitter import PacketTransmitter
+from src.communication.packet_loss import PacketLossSimulator
+from src.communication.receiver import PacketReceiver
+
+import yaml
+
+
+CONFIG_PATH = "configs/dataset.yaml"
 
 
 def main():
 
-    inventory = DatasetInventory("configs/dataset.yaml")
+    # -----------------------------------------
+    # Read configuration
+    # -----------------------------------------
+    with open(CONFIG_PATH, "r") as f:
+        config = yaml.safe_load(f)
+
+    cameras = config["cameras"]
+    manifest_path = config["manifest_path"]
+
+    # -----------------------------------------
+    # Module 1 : Dataset Inventory
+    # -----------------------------------------
+    inventory = DatasetInventory(CONFIG_PATH)
     inventory.scan_scene()
 
-    manifest = ManifestGenerator("configs/dataset.yaml")
+    # -----------------------------------------
+    # Module 2 : Manifest Generation
+    # -----------------------------------------
+    manifest = ManifestGenerator(CONFIG_PATH)
     manifest.build_manifest()
 
+    # -----------------------------------------
+    # Module 3 : Video Synchronization
+    # -----------------------------------------
     synchronizer = VideoSynchronizer(
-        "data/manifests/dataset_manifest.csv",
-        ["C01", "C02", "C03"]
+        manifest_path,
+        cameras
     )
 
-    frames = synchronizer.read_frame(0)
-
-    agent = YOLOAgent()
+    # -----------------------------------------
+    # Module 4 : YOLO Detection
+    # -----------------------------------------
+    detector = YOLOAgent()
 
     builder = PacketBuilder()
 
+    # -----------------------------------------
+    # Module 5 : Communication Layer
+    # -----------------------------------------
+    transmitter = PacketTransmitter()
+
+    packet_loss = PacketLossSimulator(loss_rate=0.0)
+
+    receiver = PacketReceiver()
+
+    # -----------------------------------------
+    # Process first synchronized frame
+    # -----------------------------------------
     frame_id = 0
+
+    frames = synchronizer.read_frame(frame_id)
+
+    if frames is None:
+        print("Unable to read synchronized frame.")
+        return
 
     for camera, frame in frames.items():
 
-        detections = agent.detect(frame)
-
         print(f"\n{camera}")
+
+        detections = detector.detect(frame)
 
         packets = builder.build(
             frame_id,
@@ -38,15 +85,29 @@ def main():
             detections
         )
 
-        print(f"\n{camera}")
+        packets = transmitter.transmit(packets)
 
-        print(f"vehicle packets: {len(packets)}")
+        packets = packet_loss.apply(packets)
+
+        receiver.receive(packets)
+
+        print(f"Packets Sent : {len(packets)}")
 
         for packet in packets:
-
             print(packet)
 
     synchronizer.release()
+
+    # -----------------------------------------
+    # Communication Summary
+    # -----------------------------------------
+    print("\n========================================")
+    print("Communication Summary")
+    print("========================================")
+
+    print(transmitter.statistics())
+    print(packet_loss.statistics())
+    print(f"Edge Server Queue : {len(receiver.get_packets())} packets")
 
 
 if __name__ == "__main__":
