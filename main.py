@@ -1,3 +1,5 @@
+import pandas as pd
+from src.geometry.calibration_manager import CalibrationManager
 from src.data.inventory import DatasetInventory
 from src.data.manifest import ManifestGenerator
 from src.data.synchronizer import VideoSynchronizer
@@ -37,6 +39,18 @@ def main():
     # -----------------------------------------
     manifest = ManifestGenerator(CONFIG_PATH)
     manifest.build_manifest()
+
+    # -----------------------------------------
+    # Module 6 : Camera Calibration
+    # -----------------------------------------
+
+    manifest_df = pd.read_csv(manifest_path)
+
+    calibration_manager = CalibrationManager(manifest_df)
+
+    calibration_manager.load()
+
+    calibration_manager.summary()
 
     # -----------------------------------------
     # Module 3 : Video Synchronization
